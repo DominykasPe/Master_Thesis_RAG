@@ -35,7 +35,7 @@
 Large Language Models (LLMs), despite their widespread adoption, struggle with generating reliable and verifiable information, often producing **hallucinations** and **outdated knowledge**. This is particularly challenging in specialized domains where accuracy is crucial.
 
 <div align="center">
-  <img src="figures/llm_response_design.png" width="500" alt="Types of LLM Hallucinations"/>
+  <img src="llm_response_design(1).png" width="500" alt="Types of LLM Hallucinations"/>
   <p><em>Figure 1: Types of LLM Hallucinations</em></p>
 </div>
 
@@ -52,7 +52,7 @@ This research addresses the critical challenge of making **NASA's vast knowledge
 The implementation of RAG techniques significantly **reduces hallucinations** and **improves response accuracy** by grounding LLM outputs in actual NASA documentation, making it particularly valuable for specialized engineering domains.
 
 <div align="center">
-  <img src="figures/RAG_with_numbers.png" width="700" alt="RAG Architecture"/>
+  <img src="RAG_with_numbers.png" width="700" alt="RAG Architecture"/>
   <p><em>Figure 2: RAG Architecture - Combining Retrieval and Generation for Enhanced Response Accuracy</em></p>
 </div>
 
@@ -75,7 +75,7 @@ The system follows a multi-stage pipeline:
 ## 🔄 Project Workflow
 
 <div align="center">
-  <img src="figures/full_scope.svg" width="900" alt="End-to-End Project Flow"/>
+  <img src="full_scope(1).svg" width="900" alt="End-to-End Project Flow"/>
   <p><em>Figure 3: End-to-End Project Flow - Processing NASA documents through extraction, chunking, and vectorization stages to enable accurate LLM responses with FAISS retrieval</em></p>
 </div>
 
