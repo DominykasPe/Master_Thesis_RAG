@@ -11,9 +11,9 @@ os.makedirs('statistics', exist_ok=True)
 
 # Load multiple JSON files
 json_files = [
-    'reprocessed_section_chunks/reprocessed_section_chunks_final.json',
-    'reprocessed_section_chunks_2/reprocessed_section_chunks_2_final.json',
-    'reprocessed_section_chunks_3/reprocessed_section_chunks_3_final.json'
+    'Chunks/reprocessed_section_chunks/reprocessed_section_chunks_final.json',
+    'Chunks/reprocessed_section_chunks_2/reprocessed_section_chunks_2_final.json',
+    'Chunks/reprocessed_section_chunks_3/reprocessed_section_chunks_3_final.json'
 ]
 
 # Initialize data structures
@@ -80,7 +80,6 @@ for json_file in json_files:
 
 # Documents by chunk count (bar chart)
 plt.figure(figsize=(10, 6))
-plt.title('Distribution of Documents by Chunk Count', fontsize=16)
 
 # Process combined data
 chunk_count_distribution = {}
