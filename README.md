@@ -5,7 +5,7 @@
 
 > **Master's Thesis Project** | University of Stavanger  
 > **Author:** Dominykas Petniunas  
-> **Contact:** 259199@uis.no
+> **Contact:** petniunas1@gmail.com
 
 ---
 
