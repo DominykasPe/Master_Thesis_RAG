@@ -185,7 +185,75 @@ pandas>=2.0.0
 - **Time Span**: 1991-2025
 - **Processing**: Section-based chunking with 3 different chunk configurations
 - **Vector Store Size**: ~50,000+ chunks
-- 
+
+---
+
+## 📈 Results
+
+### Retrieval Metrics
+
+Extensive evaluation across 50 questions reveals important trade-offs between precision, recall, and efficiency. The system was tested with various configurations of retrieved documents (k) and cosine similarity thresholds.
+
+| **k** | **Threshold** | **Precision** | **Recall** | **MRR** | **Hit Rate** |
+|-------|---------------|---------------|------------|---------|--------------|
+| 3     | None          | 0.23          | 0.66       | **0.64** | 0.68        |
+| 3     | 0.7           | 0.38          | 0.51       | 0.49    | 0.52         |
+| 3     | 0.8           | **0.39**      | 0.62       | 0.60    | 0.64         |
+| 3     | 0.9           | 0.32          | 0.64       | 0.62    | 0.66         |
+| 5     | None          | 0.14          | 0.68       | **0.64** | **0.70**    |
+| 5     | 0.8           | 0.36          | 0.62       | 0.60    | 0.64         |
+| 5     | 0.9           | 0.28          | 0.66       | 0.62    | 0.68         |
+| 7     | None          | 0.10          | 0.68       | **0.64** | **0.70**    |
+| 7     | 0.8           | 0.36          | 0.62       | 0.60    | 0.64         |
+| 7     | 0.9           | 0.26          | 0.66       | 0.62    | 0.68         |
+| 10    | None          | 0.07          | **0.69**   | **0.64** | **0.70**    |
+| 10    | 0.8           | 0.35          | 0.62       | 0.60    | 0.64         |
+| 10    | 0.9           | 0.25          | 0.67       | 0.62    | 0.68         |
+
+**Legend**: k = number of documents retrieved, Threshold = cosine similarity threshold
+
+**Key Findings**:
+- **Baseline Configuration (k=3, no threshold)**: Balances efficiency with recall (0.66), suitable for general queries
+- **Optimal Precision (k=3, threshold=0.8)**: Achieves highest precision (0.39) while maintaining strong recall (0.62), ideal for accuracy-focused applications
+- **Maximum Recall (k=10, no threshold)**: Delivers best recall (0.69) at the cost of lower precision, useful when comprehensive coverage is critical
+- **MRR Consistency**: Mean Reciprocal Rank remains stable at 0.64 across most configurations, indicating reliable ranking quality
+
+---
+
+### Generation Metrics
+
+Comparative evaluation of OpenAI GPT-4o-mini and LLaMA 3.3-70B-Instruct-Turbo across multiple dimensions demonstrates significant performance differences.
+
+| **Metric** | **OpenAI** | **LLaMA** |
+|------------|------------|-----------|
+| **BERT Precision** | 0.75 | 0.68 |
+| **BERT Recall** | 0.80 | 0.69 |
+| **BERT F1** | 0.77 | 0.68 |
+| **Semantic Similarity** | 0.78 | 0.70 |
+| **Answer Relevance** | 0.78 | 0.62 |
+| **Factual Accuracy** | 0.80 | 0.52 |
+| **Groundedness** | 0.64 | 0.52 |
+| **ROUGE-1** | 0.43 | 0.24 |
+| **ROUGE-2** | 0.22 | 0.04 |
+| **ROUGE-L** | 0.40 | 0.22 |
+| **GEval Score** | 0.71 | 0.32 |
+| **GEval Relevance** | 0.77 | 0.63 |
+| **GEval Accuracy** | 0.73 | 0.34 |
+| **GEval Groundedness** | 0.79 | 0.47 |
+
+**Performance Analysis**:
+- **OpenAI Advantages**: 
+  - Superior factual accuracy (0.80 vs 0.52) ensures reliable information delivery
+  - Higher ROUGE-1 scores (0.43 vs 0.24) indicate better lexical overlap with reference answers
+  - Strong groundedness (0.79 GEval) demonstrates better adherence to source documents
+  
+- **LLaMA Performance**: 
+  - Competitive semantic understanding (0.70 vs 0.78)
+  - Lower factual accuracy and ROUGE scores suggest challenges with precise information extraction
+  - GEval relevance (0.63) shows reasonable query understanding despite lower overall accuracy
+
+**Conclusion**: OpenAI demonstrates superior performance in producing accurate, contextually similar responses grounded in NASA documentation, making it more suitable for mission-critical engineering applications.
+
 ---
 
 ### User Evaluation Results
