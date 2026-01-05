@@ -172,12 +172,12 @@ DO NOT include a Sources section in your response. The system will add this auto
 class TogetherLLM(LLM):
     """Custom LLM class for TogetherAI that inherits from LangChain's LLM base class."""
     
-    model_name: str = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
+    model_name: str = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
     temperature: float = 0.1
     max_tokens: int = 1024
     together_client: Any = None
     
-    def __init__(self, model_name="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", temperature=0.1, max_tokens=1024):
+    def __init__(self, model_name="meta-llama/Llama-3.3-70B-Instruct-Turbo", temperature=0.1, max_tokens=1024):
         """Initialize TogetherLLM."""
         super().__init__()
         self.model_name = model_name
@@ -536,11 +536,11 @@ class RAGModel:
             # Retrieve documents first (for both models)
             if model_name.lower() == "llama":
                 # Optimize for Llama
-                self.retriever.search_kwargs["k"] = 4  # Reduce number of documents
+                self.retriever.search_kwargs["k"] = 3  # Reduce number of documents
                 self.retriever.search_kwargs["score_threshold"] = 0.8  # Higher threshold for better quality
             else:
                 # More documents for OpenAI
-                self.retriever.search_kwargs["k"] = 4
+                self.retriever.search_kwargs["k"] = 3
             
             # Get documents
             retrieved_docs = self.retriever.get_relevant_documents(question)
