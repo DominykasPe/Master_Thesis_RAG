@@ -6,8 +6,9 @@ import numpy as np
 import os
 import sys
 
-# Add the parent directory to the path to ensure imports work correctly
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the workspace root to the path to ensure imports work correctly
+workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(workspace_root)
 
 from RAG.chatBot.rag_models import get_rag_model
 from RAG.Ret_Gen_Evaluations.retrieval_evaluation import evaluate_retrieval
@@ -21,7 +22,7 @@ def main():
     
     # Load test dataset
     print("Loading test dataset...")
-    test_db_path = Path(__file__).parent.parent / "TEST_DATABASE_2.json"
+    test_db_path = Path(__file__).parent.parent.parent / "TestDatasets/TEST_DATABASE_2.json"
     with open(test_db_path, 'r') as f:
         test_data = json.load(f)
     
@@ -34,25 +35,56 @@ def main():
     results_dir = Path(__file__).parent / f"EVALUATION_OPEN_MINDED_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     results_dir.mkdir(exist_ok=True)
     
-    # Evaluate retrieval
+    # Evaluate retrieval with multiple configurations
     print("\n=== Evaluating Retrieval Component ===")
+    print("Testing multiple k and threshold configurations...")
     try:
-        retrieval_results = evaluate_retrieval(rag_model, test_questions, ground_truth_docs)
+        # Run retrieval evaluation with multiple configurations
+        # Note: None threshold means no threshold (original behavior - accepts all documents)
+        retrieval_results = evaluate_retrieval(
+            rag_model, 
+            test_questions, 
+            ground_truth_docs,
+            k_values=[3, 5, 7, 10],
+            threshold_values=[None, 0.5, 0.6, 0.7, 0.8, 0.9]
+        )
         
         # Save retrieval results
         with open(results_dir / "retrieval_results.json", 'w') as f:
             json.dump(retrieval_results, f, indent=2)
         
-        print("Retrieval Results:")
-        print(json.dumps(retrieval_results, indent=2))
+        # Print comparison table
+        print("\n" + "="*80)
+        print("RETRIEVAL PERFORMANCE COMPARISON ACROSS CONFIGURATIONS")
+        print("="*80)
+        print(f"{'Configuration':<25} {'Precision':<12} {'Recall':<12} {'MRR':<12} {'NDCG':<12} {'Hit Rate':<12}")
+        print("-"*80)
+        
+        # Sort configurations for better readability
+        sorted_configs = sorted(retrieval_results['configurations'].items())
+        for config_name, metrics in sorted_configs:
+            print(f"{config_name:<25} {metrics['precision']:<12.4f} {metrics['recall']:<12.4f} "
+                  f"{metrics['mrr']:<12.4f} {metrics['ndcg']:<12.4f} {metrics['hit_rate']:<12.4f}")
+        
+        # Find and print best configurations for each metric
+        print("\n" + "="*80)
+        print("BEST PERFORMING CONFIGURATIONS PER METRIC")
+        print("="*80)
+        
+        configs = retrieval_results['configurations']
+        for metric in ['precision', 'recall', 'mrr', 'ndcg', 'hit_rate']:
+            best_config = max(configs.items(), key=lambda x: x[1][metric])
+            print(f"{metric.upper():<15}: {best_config[0]} (score: {best_config[1][metric]:.4f})")
+        
+        print("\n" + "="*80)
+        
     except Exception as e:
         print(f"Error in retrieval evaluation: {e}")
+        import traceback
+        traceback.print_exc()
         retrieval_results = {
-            "precision": 0.0,
-            "recall": 0.0,
-            "mrr": 0.0,
-            "hit_rate": 0.0,
-            "ndcg": 0.0,
+            "configurations": {},
+            "metadata": {},
             "error": str(e)
         }
     
@@ -140,14 +172,45 @@ def generate_summary_report(results, results_dir):
     report.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     report.append("")
     
-    # Retrieval metrics
+    # Retrieval metrics - now with multiple configurations
     report.append("## Retrieval Performance")
     retrieval = results["retrieval"]
-    report.append(f"- Precision: {retrieval['precision']:.4f}")
-    report.append(f"- Recall: {retrieval['recall']:.4f}")
-    report.append(f"- MRR (Mean Reciprocal Rank): {retrieval['mrr']:.4f}")
-    report.append(f"- Hit Rate: {retrieval['hit_rate']:.4f}")
-    report.append(f"- NDCG: {retrieval['ndcg']:.4f}")
+    
+    # Check if we have the new multi-configuration format
+    if 'configurations' in retrieval:
+        report.append(f"Tested {retrieval['metadata']['total_configurations']} configurations:")
+        report.append(f"- K values: {retrieval['metadata']['k_values']}")
+        report.append(f"- Threshold values: {retrieval['metadata']['threshold_values']}")
+        report.append("")
+        
+        # Create table header
+        report.append("### Configuration Results")
+        report.append("")
+        report.append("| Configuration | Precision | Recall | MRR | NDCG | Hit Rate |")
+        report.append("|---------------|-----------|--------|-----|------|----------|")
+        
+        # Add each configuration
+        for config_name, metrics in sorted(retrieval['configurations'].items()):
+            report.append(f"| {config_name} | {metrics['precision']:.4f} | {metrics['recall']:.4f} | "
+                         f"{metrics['mrr']:.4f} | {metrics['ndcg']:.4f} | {metrics['hit_rate']:.4f} |")
+        
+        report.append("")
+        report.append("### Best Performing Configurations")
+        report.append("")
+        
+        # Find best for each metric
+        configs = retrieval['configurations']
+        for metric in ['precision', 'recall', 'mrr', 'ndcg', 'hit_rate']:
+            best_config = max(configs.items(), key=lambda x: x[1][metric])
+            report.append(f"- **{metric.upper()}**: {best_config[0]} (score: {best_config[1][metric]:.4f})")
+    else:
+        # Old format for backwards compatibility
+        report.append(f"- Precision: {retrieval.get('precision', 0):.4f}")
+        report.append(f"- Recall: {retrieval.get('recall', 0):.4f}")
+        report.append(f"- MRR (Mean Reciprocal Rank): {retrieval.get('mrr', 0):.4f}")
+        report.append(f"- Hit Rate: {retrieval.get('hit_rate', 0):.4f}")
+        report.append(f"- NDCG: {retrieval.get('ndcg', 0):.4f}")
+    
     report.append("")
     
     # Generation metrics
