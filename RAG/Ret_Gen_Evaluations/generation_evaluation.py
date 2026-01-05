@@ -183,12 +183,12 @@ def evaluate_generation(rag_model, test_questions, reference_answers, model_name
             if not rag_model.together_available:
                 empty_results['error'] = "TogetherAI not available"
                 return empty_results
-            model = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
+            model = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
         elif model_name == "llama-vision":
             if not rag_model.together_available:
                 empty_results['error'] = "TogetherAI not available"
                 return empty_results
-            model = "meta-llama/Llama-Vision-Free"
+            model = "meta-llama/Llama-Guard-3-11B-Vision-Turbo"
         else:
             empty_results['error'] = f"Unknown model type: {model_name}"
             return empty_results
