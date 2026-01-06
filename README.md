@@ -11,22 +11,74 @@
 
 ## 📋 Table of Contents
 
-- [Problem Statement](#problem-statement)
-- [Introduction](#introduction)
-- [Project Architecture](#project-architecture)
-- [Project Workflow](#project-workflow)
-- [Key Features](#key-features)
-- [Technical Stack](#technical-stack)
-- [Dataset](#dataset)
-- [Results](#results)
-  - [Retrieval Metrics](#retrieval-metrics)
-  - [Generation Metrics](#generation-metrics)
-  - [User Evaluation Results](#user-evaluation-results)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Links and Resources](#links-and-resources)
-- [Acknowledgments](#acknowledgments)
+- [Supporting Human Decision Making using Retrieval Augmented Generation](#supporting-human-decision-making-using-retrieval-augmented-generation)
+  - [📋 Table of Contents](#-table-of-contents)
+  - [📥 Data Collection Notice](#-data-collection-notice)
+  - [🎯 Problem Statement](#-problem-statement)
+  - [🚀 Introduction](#-introduction)
+    - [Why RAG?](#why-rag)
+  - [🏗️ Project Architecture](#️-project-architecture)
+  - [🔄 Project Workflow](#-project-workflow)
+  - [✨ Key Features](#-key-features)
+  - [🛠️ Technical Stack](#️-technical-stack)
+    - [Core Technologies](#core-technologies)
+    - [Key Libraries](#key-libraries)
+    - [Embedding Model Details](#embedding-model-details)
+    - [LLM Models Used](#llm-models-used)
+      - [OpenAI GPT-4o-mini](#openai-gpt-4o-mini)
+      - [LLaMA 3.3-70B-Instruct-Turbo](#llama-33-70b-instruct-turbo)
+  - [📊 Dataset](#-dataset)
+    - [Sources](#sources)
+    - [Statistics](#statistics)
+  - [📈 Results](#-results)
+    - [Retrieval Metrics](#retrieval-metrics)
+    - [Generation Metrics](#generation-metrics)
+    - [User Evaluation Results](#user-evaluation-results)
+      - [Example Tasks](#example-tasks)
+      - [Performance Comparison](#performance-comparison)
+      - [Task Completion Times](#task-completion-times)
+      - [Additional User Evaluation Visualizations](#additional-user-evaluation-visualizations)
+  - [💻 Installation](#-installation)
+    - [Prerequisites](#prerequisites)
+    - [Clone the Repository](#clone-the-repository)
+    - [Install Dependencies](#install-dependencies)
+    - [Environment Variables](#environment-variables)
+    - [Download or Build Vector Index](#download-or-build-vector-index)
+  - [🎮 Usage](#-usage)
+    - [Running the Application Locally](#running-the-application-locally)
+    - [Using the Live Application](#using-the-live-application)
+    - [Features](#features)
+    - [Example Queries](#example-queries)
+  - [📁 Project Structure](#-project-structure)
+  - [🔗 Links and Resources](#-links-and-resources)
+
+---
+
+## 📥 Data Collection Notice
+
+> ⚠️ **Important**: Many documents in this dataset contain copyrighted material from NASA and other sources. Due to copyright restrictions, the raw documents **cannot be directly distributed** with this repository.
+
+To obtain the dataset and prepare it for the RAG system, run the data collection script:
+
+```bash
+cd RAG
+python download_nasa_data.py
+```
+
+This launches an interactive console that guides you through downloading and processing the documents:
+
+<div align="center">
+  <img src="figures/terminal_output.png" width="600" alt="Data Downloader Console"/>
+  <p><em>NASA Data Downloader & Processor - Interactive console for dataset collection</em></p>
+</div>
+
+**Available Options:**
+- **NASA Lessons Learned (CSV)** - Scrapes lessons from NASA LLIS database (2000-present)
+- **NASA Conference Papers (PDFs)** - Downloads Conference Papers from NASA NTRS
+- **Both** - Downloads all document types
+- **Process existing PDFs** - Converts PDFs to searchable chunks for RAG
+
+The script handles web scraping, PDF downloading, and section-based chunking automatically.
 
 ---
 
