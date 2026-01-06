@@ -184,11 +184,72 @@ class SectionChunker:
             # Check if line is a header (# style)
             header_match = re.match(r'^(#{1,6})\s+(.+)$', line)
             
+            # Check for Roman numeral headers (e.g., "I. INTRODUCTION", "II. Methods", "A. Subsection")
+            roman_header_match = re.match(r'^([IVX]+\.)\s+([A-Z][A-Za-z\s\-]+)$', line.strip())
+            
+            # Check for letter-based subsection headers (e.g., "A. Overview", "B. Methods")
+            letter_header_match = re.match(r'^([A-Z]\.)\s+([A-Z][A-Za-z\s\-]+)$', line.strip())
+            
+            # Check for numbered headers (e.g., "1. Introduction", "2.1 Background")
+            numbered_header_match = re.match(r'^(\d+(?:\.\d+)?\.?)\s+([A-Z][A-Za-z\s\-]+)$', line.strip())
+            
             # Check for bold headers at the start of a line (e.g., "**Introduction:**")
             bold_header_match = re.match(r'^\*\*([^*]+)\*\*:?\s*(.*)$', line)
             
             # Check for headers that end with a colon (e.g., "Introduction:")
             colon_header_match = re.match(r'^([A-Z][a-zA-Z\s]+):\s+(.+)$', line)
+            
+            # Handle Roman numeral headers (I., II., III., etc.)
+            if roman_header_match or letter_header_match or numbered_header_match:
+                # If we have a current section, save it
+                if current_section is not None and current_content:
+                    content = '\n'.join(current_content).strip()
+                    if len(content.split()) >= 7:  # Skip sections with less than 7 words
+                        sections.append(Section(
+                            title=current_section,
+                            content=content,
+                            level=current_level,
+                            page_number=current_page
+                        ))
+                
+                # Determine which match we have and extract header info
+                if roman_header_match:
+                    header_marker = roman_header_match.group(1)
+                    header_text = roman_header_match.group(2).strip()
+                    # Roman numerals I-III are level 1, IV+ could be deeper
+                    level = 1
+                elif letter_header_match:
+                    header_marker = letter_header_match.group(1)
+                    header_text = letter_header_match.group(2).strip()
+                    level = 2  # Letter subsections are level 2
+                else:  # numbered_header_match
+                    header_marker = numbered_header_match.group(1)
+                    header_text = numbered_header_match.group(2).strip()
+                    # Count dots to determine level (1. = level 1, 1.1 = level 2, etc.)
+                    level = header_marker.count('.') if '.' in header_marker else 1
+                
+                # Include the marker in the title for clarity
+                full_title = f"{header_marker} {header_text}"
+                
+                # Skip headers that appear to be figure/table captions
+                if re.search(r'(figure|fig\.|table|image|chart)', header_text.lower()):
+                    if current_section is not None:
+                        current_content.append(line)
+                    i += 1
+                    continue
+                
+                # Update the current section
+                current_section = full_title
+                current_level = level
+                current_content = []
+                
+                # If this is a main section (Roman numeral), update the main section tracker
+                if roman_header_match:
+                    current_main_section = full_title
+                    current_main_level = level
+                
+                i += 1
+                continue
             
             if header_match:
                 # If we have a current section, save it
@@ -442,9 +503,9 @@ class SectionChunker:
                     current_section.content += "\n\n" + next_section.content
                     skip_indices.add(j)
                 # Special case: if main section content appears between subsections
-                elif "-" in current_section.title and "-" not in next_section.title:
-                    main_title = current_section.title.split(" - ")[0]
-                    if main_title == next_section.title:
+                elif " - " in current_section.title and " - " not in next_section.title:
+                    parts = current_section.title.split(" - ")
+                    if len(parts) >= 2 and parts[0] == next_section.title:
                         # This is main section content that should be merged with the next subsection
                         # We'll mark it to skip and handle it in the next pass
                         skip_indices.add(j)
@@ -456,9 +517,15 @@ class SectionChunker:
         main_section_content = {}
         
         for section in processed_sections:
-            if "-" in section.title:  # This is a subsection
-                main_title = section.title.split(" - ")[0]
-                subsection_title = section.title.split(" - ")[1]
+            if " - " in section.title:  # This is a subsection (note: space-hyphen-space)
+                parts = section.title.split(" - ")
+                if len(parts) >= 2:
+                    main_title = parts[0]
+                    subsection_title = parts[1]
+                else:
+                    # No proper separator found, treat as non-subsection
+                    final_sections.append(section)
+                    continue
                 
                 # If we have accumulated content for this main section, add it to the subsection
                 if main_title in main_section_content:
