@@ -10,9 +10,18 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 class NASALessonsLearned:
-    def __init__(self, max_workers=4):
+    def __init__(self, max_workers=4, start_year=2000, end_year=None):
+        """
+        Initialize NASA Lessons Learned scraper.
+        
+        Args:
+            max_workers: Number of parallel browser instances for scraping
+            start_year: Start year for filtering lessons (default: 2000)
+            end_year: End year for filtering lessons (default: current year)
+        """
         # Set up logging
         logging.basicConfig(
             level=logging.INFO,
@@ -23,17 +32,25 @@ class NASALessonsLearned:
         
         # Number of parallel workers
         self.max_workers = max_workers
+        self.start_year = start_year
+        self.end_year = end_year if end_year else datetime.now().year
         
         # Setup Selenium with Firefox
         self.options = Options()
         self.options.add_argument('--headless')  # Run in headless mode
         
-        # Update the base URL to use NASA Centers (JSC in this example)
+        # Base URL for NASA LLIS
         self.base_url = "https://llis.nasa.gov"
-        self.search_url = f"{self.base_url}/search?organization=msfc&page="
         
-        # Update CSV filename to reflect NASA Center data
-        self.csv_filename = 'nasa_lessons_learned_centers_1.csv'
+        # Build date ranges for scraping
+        # NASA LLIS uses specific date range formats
+        self.date_ranges = self._build_date_ranges()
+        
+        self.logger.info(f"Will scrape lessons from {self.start_year} to {self.end_year}")
+        self.logger.info(f"Date ranges to process: {len(self.date_ranges)}")
+        
+        # CSV filename based on date range
+        self.csv_filename = f'nasa_lessons_learned_{self.start_year}_{self.end_year}.csv'
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.csv_path = os.path.join(script_dir, self.csv_filename)
         
@@ -45,66 +62,109 @@ class NASALessonsLearned:
                     'url', 'subject', 'abstract', 'driving_event', 
                     'lessons_learned', 'recommendations', 'evidence',
                     'program_relation', 'program_phase', 
-                    'mission_directorate', 'topics'
+                    'mission_directorate', 'topics', 'date_range'
                 ]).to_csv(f, index=False)
         else:
             self.logger.info(f"Appending to existing CSV file: {self.csv_filename}")
         
         # Create a driver for URL collection
         self.driver = webdriver.Firefox(options=self.options)
-
-    def get_lessons_urls(self, max_pages: int = 27) -> List[str]:
-        lesson_urls = []
-        self.logger.info(f"Starting to collect URLs from up to {max_pages} pages...")
+    
+    def _build_date_ranges(self) -> List[str]:
+        """
+        Build date range parameters for NASA LLIS URLs.
         
-        for page in range(1, max_pages + 1):
-            try:
-                self.logger.info(f"Collecting URLs from page {page}/{max_pages}")
-                url = f"{self.search_url}{page}"
-                self.driver.get(url)
-                
-                # Wait for the page to load
-                time.sleep(3)
-                
-                # Check if there are any lessons on this page
-                lesson_elements = self.driver.find_elements(By.CSS_SELECTOR, "a[href*='/lesson/']")
-                
-                # If no lessons found, we've reached the end of available pages
-                if not lesson_elements:
-                    self.logger.info(f"No more lessons found on page {page}. Stopping pagination.")
-                    break
-                
-                # Get all lesson links
-                new_urls = [elem.get_attribute('href') for elem in lesson_elements]
-                lesson_urls.extend(new_urls)
-                
-                self.logger.info(f"Found {len(new_urls)} lessons on page {page}")
-                
-                # Check if we're on the last page by looking at the pagination controls
-                try:
-                    # Look for pagination elements
-                    pagination = self.driver.find_element(By.CSS_SELECTOR, ".pagination")
-                    # Get the current active page number
-                    active_page = pagination.find_element(By.CSS_SELECTOR, ".active").text
-                    # Get all page numbers
-                    page_numbers = [el.text for el in pagination.find_elements(By.CSS_SELECTOR, "li:not(.prev):not(.next) a")]
-                    
-                    # If the active page is the last number in the pagination, we're on the last page
-                    if active_page == page_numbers[-1]:
-                        self.logger.info(f"Reached the last page ({active_page}). Stopping pagination.")
-                        break
-                except Exception as pagination_error:
-                    self.logger.warning(f"Could not determine pagination status: {pagination_error}")
-                    # Continue anyway, as we'll stop if no lessons are found on the next page
-                
-                time.sleep(1)
-                
-            except Exception as e:
-                self.logger.error(f"Error on page {page}: {e}")
-                # Don't break the loop, try the next page
+        NASA LLIS uses formats like:
+        - '2000-2003' for early years grouped together
+        - '2004', '2005', etc. for individual years
+        """
+        date_ranges = []
+        current_year = self.start_year
+        
+        # Handle early years grouped (2000-2003 is often grouped on LLIS)
+        if current_year <= 2003 and self.end_year >= 2000:
+            if self.start_year <= 2003:
+                date_ranges.append('2000-2003')
+                current_year = 2004
+        
+        # Add individual years from 2004 onwards
+        while current_year <= self.end_year:
+            date_ranges.append(str(current_year))
+            current_year += 1
+        
+        return date_ranges
 
-        self.logger.info(f"Finished collecting URLs. Total lessons found: {len(lesson_urls)}")
-        return lesson_urls
+    def get_lessons_urls(self, max_pages_per_range: int = 50) -> List[tuple]:
+        """
+        Collect lesson URLs for all date ranges.
+        
+        Returns:
+            List of tuples: (url, date_range)
+        """
+        all_lesson_urls = []
+        
+        self.logger.info(f"Starting to collect URLs across {len(self.date_ranges)} date ranges...")
+        
+        for date_range in self.date_ranges:
+            self.logger.info(f"\n{'='*50}")
+            self.logger.info(f"Processing date range: {date_range}")
+            self.logger.info(f"{'='*50}")
+            
+            range_urls = []
+            page = 1
+            
+            while page <= max_pages_per_range:
+                try:
+                    # Build URL with date filter
+                    search_url = f"{self.base_url}/search?lesson_date={date_range}&page={page}"
+                    self.logger.info(f"Collecting URLs from: {search_url}")
+                    
+                    self.driver.get(search_url)
+                    
+                    # Wait for the page to load
+                    time.sleep(3)
+                    
+                    # Check if there are any lessons on this page
+                    lesson_elements = self.driver.find_elements(By.CSS_SELECTOR, "a[href*='/lesson/']")
+                    
+                    # If no lessons found, we've reached the end for this date range
+                    if not lesson_elements:
+                        self.logger.info(f"No more lessons found for {date_range} on page {page}. Moving to next date range.")
+                        break
+                    
+                    # Get all lesson links
+                    new_urls = [(elem.get_attribute('href'), date_range) for elem in lesson_elements]
+                    range_urls.extend(new_urls)
+                    
+                    self.logger.info(f"Found {len(new_urls)} lessons on page {page} for {date_range}")
+                    
+                    # Check if we're on the last page by looking at the pagination controls
+                    try:
+                        pagination = self.driver.find_element(By.CSS_SELECTOR, ".pagination")
+                        active_page = pagination.find_element(By.CSS_SELECTOR, ".active").text
+                        page_numbers = [el.text for el in pagination.find_elements(By.CSS_SELECTOR, "li:not(.prev):not(.next) a")]
+                        
+                        if page_numbers and active_page == page_numbers[-1]:
+                            self.logger.info(f"Reached the last page ({active_page}) for {date_range}.")
+                            break
+                    except Exception as pagination_error:
+                        self.logger.debug(f"Could not determine pagination status: {pagination_error}")
+                    
+                    page += 1
+                    time.sleep(1)
+                    
+                except Exception as e:
+                    self.logger.error(f"Error on page {page} for {date_range}: {e}")
+                    page += 1  # Try the next page
+            
+            self.logger.info(f"Collected {len(range_urls)} lessons for date range {date_range}")
+            all_lesson_urls.extend(range_urls)
+        
+        self.logger.info(f"\n{'='*50}")
+        self.logger.info(f"Finished collecting URLs. Total lessons found: {len(all_lesson_urls)}")
+        self.logger.info(f"{'='*50}")
+        
+        return all_lesson_urls
 
     def _get_text(self, soup: BeautifulSoup, field_name: str) -> str:
         """Helper method to extract text from a field"""
@@ -155,8 +215,14 @@ class NASALessonsLearned:
             self.logger.error(f"Error extracting subject: {e}")
             return "None"
 
-    def extract_lesson_data(self, url: str) -> Dict:
-        """Extract data from a single lesson URL"""
+    def extract_lesson_data(self, url_tuple: tuple) -> Dict:
+        """
+        Extract data from a single lesson URL.
+        
+        Args:
+            url_tuple: Tuple of (url, date_range)
+        """
+        url, date_range = url_tuple
         driver = None
         try:
             # Create a new driver for this thread
@@ -189,7 +255,8 @@ class NASALessonsLearned:
                 'program_relation': self._get_text(soup, 'Program Relation'),
                 'program_phase': self._get_text(soup, 'Program/Project Phase'),
                 'mission_directorate': self._get_text(soup, 'Mission Directorate(s)'),
-                'topics': self._get_text(soup, 'Topic(s)')
+                'topics': self._get_text(soup, 'Topic(s)'),
+                'date_range': date_range
             }
             
             return data
@@ -207,7 +274,8 @@ class NASALessonsLearned:
                 'program_relation': "Error",
                 'program_phase': "Error",
                 'mission_directorate': "Error",
-                'topics': "Error"
+                'topics': "Error",
+                'date_range': date_range
             }
         finally:
             if driver:
@@ -229,32 +297,40 @@ class NASALessonsLearned:
     
     def collect_all_lessons(self) -> pd.DataFrame:
         self.logger.info("Starting collection of all lessons...")
-        lesson_urls = self.get_lessons_urls()
-        total_urls = len(lesson_urls)
+        self.logger.info(f"Date range: {self.start_year} to {self.end_year}")
+        
+        lesson_url_tuples = self.get_lessons_urls()
+        total_urls = len(lesson_url_tuples)
         self.logger.info(f"Found {total_urls} lessons to process")
         
         # Check if we already have some of these URLs in the CSV
         try:
             existing_df = pd.read_csv(self.csv_path)
             existing_urls = set(existing_df['url'].tolist())
-            lesson_urls = [url for url in lesson_urls if url not in existing_urls]
-            self.logger.info(f"After filtering already processed URLs, {len(lesson_urls)} lessons remain to be processed")
+            lesson_url_tuples = [(url, date_range) for url, date_range in lesson_url_tuples if url not in existing_urls]
+            self.logger.info(f"After filtering already processed URLs, {len(lesson_url_tuples)} lessons remain to be processed")
         except Exception as e:
             self.logger.warning(f"Could not check for existing URLs: {e}")
+        
+        if not lesson_url_tuples:
+            self.logger.info("No new lessons to process!")
+            return pd.read_csv(self.csv_path)
         
         # Process lessons in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Submit all tasks
-            future_to_url = {executor.submit(self.extract_lesson_data, url): url for url in lesson_urls}
+            future_to_url = {executor.submit(self.extract_lesson_data, url_tuple): url_tuple for url_tuple in lesson_url_tuples}
             
             # Process results as they complete
             for i, future in enumerate(concurrent.futures.as_completed(future_to_url), 1):
-                url = future_to_url[future]
+                url_tuple = future_to_url[future]
+                url, date_range = url_tuple
                 try:
                     data = future.result()
                     self.save_to_csv(data)
-                    self.logger.info(f"Processed {i}/{len(lesson_urls)}: {url}")
-                    self.logger.info(f"Subject: {data['subject'][:100]}...")
+                    self.logger.info(f"Processed {i}/{len(lesson_url_tuples)}: {url} [{date_range}]")
+                    if data['subject'] and data['subject'] != "Error":
+                        self.logger.info(f"Subject: {data['subject'][:100]}...")
                 except Exception as exc:
                     self.logger.error(f"Error processing {url}: {exc}")
         
@@ -268,6 +344,12 @@ class NASALessonsLearned:
 
 
 if __name__ == "__main__":
-    # You can adjust the number of parallel workers here
-    scraper = NASALessonsLearned(max_workers=4)
+    # Download all lessons from 2000 to current year
+    # You can adjust the date range and number of parallel workers
+    scraper = NASALessonsLearned(
+        max_workers=4,
+        start_year=2000,
+        end_year=None  # None = current year
+    )
     df = scraper.collect_all_lessons()
+    print(f"\nTotal lessons collected: {len(df)}")
