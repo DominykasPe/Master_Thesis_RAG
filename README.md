@@ -152,45 +152,46 @@ The system follows a multi-stage pipeline:
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | **Language** | Python | 3.8+ |
-| **Web Framework** | Streamlit | 1.30.0+ |
-| **LLM Framework** | LangChain | 0.1.0+ |
-| **Vector Store** | FAISS | 1.7.4+ |
+| **Web Framework** | Streamlit | 1.35.0+ |
+| **LLM Framework** | LangChain | 0.3.0+ |
+| **Vector Store** | FAISS | 1.8.0+ |
 | **Embeddings** | HuggingFace `all-MiniLM-L6-v2` | - |
 | **LLM Models** | OpenAI GPT-4o-mini, LLaMA 3.3-70B-Instruct-Turbo | - |
-| **Database** | Supabase | 2.15.0+ |
+| **Database** | Supabase | 2.3.0+ |
 
 ### Key Libraries
 
 ```python
 # LLM and RAG Framework
-langchain>=0.1.0
-langchain-openai>=0.0.2
-langchain-community>=0.0.10
-langchain-core>=0.1.10
-langchain-ollama>=0.0.1
-langchain-huggingface>=0.0.5
+langchain>=0.3.0,<1.0.0
+langchain-openai>=0.2.0,<1.0.0
+langchain-community>=0.3.0,<1.0.0
+langchain-core>=0.3.0,<1.0.0
+langchain-ollama>=0.2.0,<1.0.0
+langchain-text-splitters>=0.3.0,<1.0.0
+langchain-huggingface>=0.1.0,<1.0.0
 
 # Vector Search and Embeddings
-faiss-cpu>=1.7.4
-sentence-transformers>=2.2.2
+faiss-cpu>=1.8.0
+sentence-transformers>=2.6.0
 
 # LLM Providers
-openai>=1.3.0
-together>=0.2.8  # For LLaMA 3.3-70B via TogetherAI
+openai>=1.40.0
+together>=1.1.0  # For LLaMA 3.3-70B via TogetherAI
 
 # Machine Learning
-torch>=2.0.0
-transformers>=4.30.0
-numpy>=1.24.0
+torch>=2.2.0
+transformers>=4.37.0
+numpy>=1.26.0
 
 # Web Application
-streamlit>=1.30.0
+streamlit>=1.35.0
 python-dotenv>=1.0.0
 requests>=2.31.0
 
 # Database and Analytics
-supabase>=2.15.0
-pandas>=2.0.0
+supabase>=2.3.0
+pandas>=2.2.0
 ```
 
 ### Embedding Model Details
@@ -371,7 +372,7 @@ Users were assigned **five engineering tasks** requiring domain-specific problem
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/Domas7/Master_Thesis_RAG.git
+git clone https://github.com/DominykasPe/Master_Thesis_RAG.git
 cd Master_Thesis_RAG
 ```
 
